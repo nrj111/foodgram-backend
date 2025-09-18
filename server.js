@@ -2,6 +2,8 @@ require('dotenv').config();
 const app = require("./src/app")
 const connectDB = require('./src/db/db')
 
+app.set('trust proxy', 1) // needed for secure cookies behind reverse proxy (Vercel)
+
 connectDB();
 
 // Start HTTP server only when not running on Vercel
