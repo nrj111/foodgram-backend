@@ -32,21 +32,14 @@ app.options('*', cors(corsOptions)); // handle preflight globally
 app.use(cookieParser());
 app.use(express.json());
 
+// Probes to verify deployment is serving
+app.get('/', (req, res) => res.status(200).json({ ok: true, service: 'foodgram-backend', base: '/' }));
+app.get('/api', (req, res) => res.status(200).json({ ok: true, base: '/api' }));
 // Health check
 app.get('/api/health', (req, res) => res.status(200).json({ ok: true }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/food', foodRoutes);
 app.use('/api/food-partner', foodPartnerRoutes);
-
-// Health checks
-app.get('/', (req, res) => res.status(200).send('OK'));
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    ok: true,
-    env: process.env.VERCEL ? 'vercel' : 'local',
-    time: new Date().toISOString()
-  });
-});
 
 module.exports = app;
