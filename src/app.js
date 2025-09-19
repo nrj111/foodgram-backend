@@ -32,10 +32,9 @@ app.options('*', cors(corsOptions)); // handle preflight globally
 app.use(cookieParser());
 app.use(express.json());
 
-// Probes to verify deployment is serving
-app.get('/', (req, res) => res.status(200).json({ ok: true, service: 'foodgram-backend', base: '/' }));
+// Probes
+app.get('/', (req, res) => res.status(200).json({ ok: true, service: 'foodgram-backend' }));
 app.get('/api', (req, res) => res.status(200).json({ ok: true, base: '/api' }));
-// Health check
 app.get('/api/health', (req, res) => res.status(200).json({ ok: true }));
 
 app.use('/api/auth', authRoutes);
