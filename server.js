@@ -1,20 +1,20 @@
 require('dotenv').config();
 const app = require("./src/app")
 const connectDB = require('./src/db/db')
-const cors = require('cors')
 
-// Allow localhost:5173 and Vercel frontends
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  process.env.FRONTEND_ORIGIN,
-  process.env.FRONTEND_ORIGIN_2,
-].filter(Boolean)
+app.set('trust proxy', 1) // secure cookies behind proxy (Vercel)
 
-const corsOptions = {
-  origin: (origin, cb) => {
-    if (!origin) return cb(null, true)
-    const ok = allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin)
+connectDB();
+
+// Start HTTP server only when not running on Vercel
+if (!process.env.VERCEL) {
+  const port = process.env.PORT || 3000;
+  app.listen(port, () => {
+    console.log(`Server running locally on http://localhost:${port}`);
+  });
+}
+
+module.exports = app;
     return ok ? cb(null, true) : cb(new Error('Not allowed by CORS'))
   },
   credentials: true,
