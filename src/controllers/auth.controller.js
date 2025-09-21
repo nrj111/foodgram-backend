@@ -12,8 +12,18 @@ const cookieOptions = {
   maxAge: 7 * 24 * 60 * 60 * 1000
 }
 
+// Guard: ensure body is present (helps when parsers are missing or wrong Content-Type)
+function assertBody(req, res) {
+  if (!req.body || (typeof req.body === 'object' && Object.keys(req.body).length === 0)) {
+    res.status(400).json({ message: "Empty request body. Send JSON and set Content-Type: application/json" })
+    return false
+  }
+  return true
+}
+
 async function registerUser (req, res){
     try {
+        if (!assertBody(req, res)) return
         const { fullName, email, password } = req.body;
         if (!fullName || !email || !password) {
           return res.status(400).json({ message: "fullName, email and password are required" });
@@ -37,6 +47,7 @@ async function registerUser (req, res){
 
 async function loginUser (req, res) {
     try {
+        if (!assertBody(req, res)) return
         const {email, password} = req.body;
         if (!email || !password) {
           return res.status(400).json({ message: "Email and password are required" });
@@ -73,6 +84,7 @@ function logoutUser (req, res) {
 
 async function registerFoodPartner(req, res) {
   try {
+    if (!assertBody(req, res)) return
     const { name, contactName, phone, address, email, password } = req.body;
     if (!name || !contactName || !phone || !address || !email || !password) {
       return res.status(400).json({ message: "name, contactName, phone, address, email and password are required" });
@@ -105,6 +117,7 @@ async function registerFoodPartner(req, res) {
 
 async function loginFoodPartner (req, res) {
     try {
+        if (!assertBody(req, res)) return
         const {email, password} = req.body;
         if (!email || !password) {
           return res.status(400).json({ message: "Email and password are required" });
