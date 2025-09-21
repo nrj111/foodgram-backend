@@ -6,13 +6,6 @@
         "use": "@vercel/node" 
     }
   ],
-  "functions": {
-    "server.js": {
-      "runtime": "nodejs18.x",
-      "memory": 1024,
-      "maxDuration": 10
-    }
-  },
   "routes": [
     { "src": "/api", "dest": "server.js" },
     { "src": "/api/(.*)", "dest": "server.js" },
