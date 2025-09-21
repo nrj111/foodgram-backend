@@ -24,11 +24,14 @@ const corsOptions = {
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
 };
 
+app.set('trust proxy', 1)
+
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 app.use(cookieParser());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }))
 
 // Probes/health
 app.get('/', (_req, res) => res.status(200).json({ ok: true, service: 'foodgram-backend' }));

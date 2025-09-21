@@ -154,11 +154,37 @@ function logoutFoodPartner (req, res) {
     }
 }
 
+// New: session endpoints for frontend redirects
+function getUserSession(req, res) {
+  if (!req.user) return res.status(401).json({ authenticated: false });
+  return res.status(200).json({
+    authenticated: true,
+    user: { id: req.user._id, email: req.user.email, fullName: req.user.fullName }
+  });
+}
+
+function getPartnerSession(req, res) {
+  if (!req.foodPartner) return res.status(401).json({ authenticated: false });
+  return res.status(200).json({
+    authenticated: true,
+    foodPartner: {
+      id: req.foodPartner._id,
+      email: req.foodPartner.email,
+      name: req.foodPartner.name,
+      contactName: req.foodPartner.contactName,
+      phone: req.foodPartner.phone,
+      address: req.foodPartner.address
+    }
+  });
+}
+
 module.exports = {
     registerUser,
     loginUser,
     logoutUser,
     registerFoodPartner,
     loginFoodPartner,
-    logoutFoodPartner
+    logoutFoodPartner,
+    getUserSession,
+    getPartnerSession
 }
