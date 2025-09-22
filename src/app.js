@@ -12,14 +12,14 @@ const allowedOrigins = [
   'http://127.0.0.1:5173',
   'http://localhost:3000',
   'http://127.0.0.1:3000',
-  'https://foodgram-frontend.vercel.app', // hard-allow your deployed frontend
-  process.env.FRONTEND_ORIGIN,             // e.g., https://your-frontend.vercel.app
-  process.env.FRONTEND_ORIGIN_2,           // optional second origin
+  'https://foodgram-frontend.vercel.app',
+  process.env.FRONTEND_ORIGIN,
+  process.env.FRONTEND_ORIGIN_2,
 ].filter(Boolean);
 
 const corsOptions = {
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // allow non-browser tools
+    if (!origin) return cb(null, true);
     const ok = allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin);
     return ok ? cb(null, true) : cb(new Error('Not allowed by CORS'));
   },
@@ -29,7 +29,7 @@ const corsOptions = {
   optionsSuccessStatus: 204
 };
 
-app.set('trust proxy', 1)
+app.set('trust proxy', 1);
 
 // reflect CORS per-origin and avoid cache mixups at the edge
 app.use((req, res, next) => {
