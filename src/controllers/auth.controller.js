@@ -21,6 +21,15 @@ function assertBody(req, res) {
   return true
 }
 
+// Ensure auth responses include explicit CORS headers so cookies stick cross-site
+function setCorsForAuth(req, res) {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+}
+
 async function registerUser (req, res){
     try {
         if (!assertBody(req, res)) return
@@ -35,11 +44,13 @@ async function registerUser (req, res){
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = await userModel.create({ fullName, email, password: hashedPassword })
         const token = jwt.sign({ id : user._id }, process.env.JWT_SECRET, { expiresIn: '7d' })
+        setCorsForAuth(req, res)
         res.cookie("userToken", token, cookieOptions)
         return res.status(201).json({
             message:"User Registered Successfully",
             token,
-            user: { _id : user._id, fullName : user.fullName, email : user.email }
+            user: { _id : user._id, fullName : user.fullName, email : user.email },
+            redirectTo: "/"
         })
     } catch {
         return res.status(500).json({ message: "Server error during registration" })
@@ -62,13 +73,15 @@ async function loginUser (req, res) {
             return res.status(400).json({ message : "Invalid Username and Password" })
         }
         const token = jwt.sign({ id : user._id },  process.env.JWT_SECRET, { expiresIn: '7d' })
+        setCorsForAuth(req, res)
         res.cookie("userToken", token, cookieOptions)
         return res.status(200).json({
             message: "User logged in Successfully",
             token,
             id : user._id,
             email : user.email,
-            fullName : user.fullName
+            fullName : user.fullName,
+            redirectTo: "/"
         })
     } catch {
         return res.status(500).json({ message: "Server error during login" })
@@ -100,6 +113,7 @@ async function registerFoodPartner(req, res) {
       name, contactName, phone, address, email, password: hashedPassword,
     });
     const token = jwt.sign({ id: foodPartner._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    setCorsForAuth(req, res)
     res.cookie("partnerToken", token, cookieOptions);
     return res.status(201).json({
       message: "Food Partner Registered Successfully",
@@ -112,6 +126,7 @@ async function registerFoodPartner(req, res) {
         phone: foodPartner.phone,
         address: foodPartner.address,
       },
+      redirectTo: "/"
     });
   } catch {
     return res.status(500).json({ message: "Server error during partner registration" });
@@ -134,6 +149,7 @@ async function loginFoodPartner (req, res) {
             return res.status(400).json({ message : "Invalid Email or password" })
         }
         const token = jwt.sign({ id : foodPartner._id }, process.env.JWT_SECRET, { expiresIn: '7d' })
+        setCorsForAuth(req, res)
         res.cookie("partnerToken", token, cookieOptions)
         return res.status(200).json({
             message : "Food Partner logged in Successfully",
@@ -142,19 +158,11 @@ async function loginFoodPartner (req, res) {
                 id : foodPartner._id,
                 email : foodPartner.email,
                 fullName : foodPartner.name
-            }
+            },
+            redirectTo: "/"
         })
     } catch {
         return res.status(500).json({ message: "Server error during partner login" })
-    }
-}
-
-function logoutFoodPartner (req, res) {
-    try {
-        res.clearCookie("partnerToken", { ...cookieOptions })
-        return res.status(200).json({ message : "Food Partner Logged out Successfully" })
-    } catch {
-        return res.status(200).json({ message : "Food Partner Logged out" })
     }
 }
 
