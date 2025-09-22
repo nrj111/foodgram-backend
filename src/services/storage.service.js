@@ -27,15 +27,11 @@ function assertImagekitEnv() {
     if (!process.env.IMAGEKIT_PUBLIC_KEY) missing.push('IMAGEKIT_PUBLIC_KEY');
     if (!process.env.IMAGEKIT_PRIVATE_KEY) missing.push('IMAGEKIT_PRIVATE_KEY');
     if (!process.env.IMAGEKIT_URL_ENDPOINT) missing.push('IMAGEKIT_URL_ENDPOINT');
-    if (missing.length) {
-        throw new Error(`Missing ImageKit env: ${missing.join(', ')}`);
-    }
+    if (missing.length) throw new Error(`Missing ImageKit env: ${missing.join(', ')}`);
 }
 
 async function uploadFile (fileBuffer, fileName, mimeType) {
-    if (!fileBuffer) {
-        throw new Error("No file buffer provided to uploadFile");
-    }
+    if (!fileBuffer) throw new Error("No file buffer provided to uploadFile");
     assertImagekitEnv();
 
     try {
@@ -44,19 +40,23 @@ async function uploadFile (fileBuffer, fileName, mimeType) {
         const finalName = `${fileName || 'upload'}${ext}`;
 
         const result = await imagekit.upload({
-            file: base64,            // raw base64 string accepted
+            file: base64,           // raw base64 string
             fileName: finalName,
-            useUniqueFileName: true
-            // folder: 'foodgram' // optional: uncomment to group uploads
+            useUniqueFileName: true,
+            // folder: 'foodgram'   // optional
         });
 
-        if (!result || !result.url) {
-            throw new Error("ImageKit upload did not return a url");
-        }
-
+        if (!result || !result.url) throw new Error("ImageKit upload did not return a url");
         return result.url;
     } catch (err) {
         console.error("ImageKit upload error:", err?.message || err);
+        throw err;
+    }
+}
+
+module.exports = {
+    uploadFile
+}
         throw err;
     }
 }
