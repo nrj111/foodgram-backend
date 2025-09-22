@@ -16,10 +16,8 @@ router.post('/',
     upload.single("video"),
     foodController.createFood)
 
-
-/* GET /api/food/ [protected] */
+/* GET /api/food/ [public] */
 router.get("/",
-    // authMiddleware.authUserMiddleware,
     foodController.getFoodItems)
 
 

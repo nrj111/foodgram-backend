@@ -103,7 +103,7 @@ Routes summary (base URL http://localhost:3000):
   - GET  /api/auth/foodPartner/logout
 - Food
   - POST /api/food                      (Food Partner auth; multipart field: video; fields: name, description, price)
-  - GET  /api/food                      (User auth; returns feed with foodPartner.name populated)
+  - GET  /api/food                      (Public; returns feed with foodPartner.name populated)
   - POST /api/food/like                 (User auth; body: { foodId })
   - POST /api/food/save                 (User auth; body: { foodId })
   - GET  /api/food/save                 (User auth; returns saved foods with foodPartner.name)
@@ -201,6 +201,47 @@ Example (replace with your images):
 ## License
 
 MIT (or your chosen license)
+
+## Deploy Frontend to Vercel
+
+1) Prepare the frontend
+- Ensure package.json has a build script (Vite: "build": "vite build", output: dist).
+- Add an API base env for production (Vite .env.production): VITE_API_BASE=https://your-backend.vercel.app
+- Axios: baseURL from import.meta.env.VITE_API_BASE, withCredentials: true (and Authorization: Bearer <token> if used).
+
+2) Allow the frontend domain in backend CORS
+- Set in backend Vercel Project Settings:
+  - FRONTEND_ORIGIN=https://your-frontend.vercel.app
+  - FRONTEND_ORIGIN_2=optional second origin
+- Redeploy backend.
+
+3) Deploy the frontend on Vercel
+- Import the frontend repo as a New Project.
+- If monorepo, set Root Directory to frontend.
+- Framework Preset: Vite
+- Build Command: npm run build
+- Output Directory: dist
+- Environment Variables (Production and Preview):
+  - VITE_API_BASE=https://your-backend.vercel.app
+- Deploy.
+
+4) Test
+- Open your frontend URL, login/signup, then load the feed (GET /api/food).
+
+### Troubleshooting (Frontend deploy)
+- Vercel build error: Cannot find package '@vitejs/plugin-react'
+  1) In frontend folder:
+     - npm i -D vite @vitejs/plugin-react
+     - npm i react react-dom
+  2) vite.config.js:
+     import { defineConfig } from 'vite'
+     import react from '@vitejs/plugin-react'
+     export default defineConfig({ plugins: [react()] })
+  3) Commit package-lock.json and ensure Vercel Root Directory is frontend.
+  4) Redeploy.
+
+- 401 after login
+  - Ensure Axios withCredentials: true, HTTPS API base, backend CORS includes your frontend origin, and cookies are SameSite=None; Secure with trust proxy enabled.
 
 ---
 Happy hacking!
