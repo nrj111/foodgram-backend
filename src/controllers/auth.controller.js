@@ -34,10 +34,11 @@ async function registerUser (req, res){
         }
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = await userModel.create({ fullName, email, password: hashedPassword })
-        const token = jwt.sign({ id : user._id }, process.env.JWT_SECRET)
+        const token = jwt.sign({ id : user._id }, process.env.JWT_SECRET, { expiresIn: '7d' })
         res.cookie("userToken", token, cookieOptions)
         return res.status(201).json({
             message:"User Registered Successfully",
+            token,
             user: { _id : user._id, fullName : user.fullName, email : user.email }
         })
     } catch {
@@ -60,10 +61,11 @@ async function loginUser (req, res) {
         if(!isPasswordValid){
             return res.status(400).json({ message : "Invalid Username and Password" })
         }
-        const token = jwt.sign({ id : user._id },  process.env.JWT_SECRET)
+        const token = jwt.sign({ id : user._id },  process.env.JWT_SECRET, { expiresIn: '7d' })
         res.cookie("userToken", token, cookieOptions)
         return res.status(200).json({
             message: "User logged in Successfully",
+            token,
             id : user._id,
             email : user.email,
             fullName : user.fullName
@@ -101,6 +103,7 @@ async function registerFoodPartner(req, res) {
     res.cookie("partnerToken", token, cookieOptions);
     return res.status(201).json({
       message: "Food Partner Registered Successfully",
+      token,
       foodPartner: {
         id: foodPartner._id,
         email: foodPartner.email,
@@ -130,10 +133,11 @@ async function loginFoodPartner (req, res) {
         if (!isPasswordValid){
             return res.status(400).json({ message : "Invalid Email or password" })
         }
-        const token = jwt.sign({ id : foodPartner._id }, process.env.JWT_SECRET)
+        const token = jwt.sign({ id : foodPartner._id }, process.env.JWT_SECRET, { expiresIn: '7d' })
         res.cookie("partnerToken", token, cookieOptions)
         return res.status(200).json({
             message : "Food Partner logged in Successfully",
+            token,
             foodPartner :{
                 id : foodPartner._id,
                 email : foodPartner.email,

@@ -10,6 +10,8 @@ const foodPartnerRoutes = require('./routes/food-partner.routes');
 const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
   process.env.FRONTEND_ORIGIN,   // e.g., https://your-frontend.vercel.app
   process.env.FRONTEND_ORIGIN_2, // optional second origin
 ].filter(Boolean);
