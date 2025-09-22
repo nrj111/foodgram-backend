@@ -5,7 +5,7 @@ function connectDB(){
     .then(() => {
         console.log("MongoDB Connected");
     }).catch((err) => {
-        console.log("DB connection error");
+        console.error("DB connection error:", err?.message || err);
     })
 } 
 
