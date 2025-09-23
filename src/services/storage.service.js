@@ -34,6 +34,22 @@ async function uploadFile (fileBuffer, fileName, mimeType) {
     }
 }
 
+// New: provide signature/token/expire/publicKey/urlEndpoint for client-side uploads
+function getImagekitAuth() {
+    if (!process.env.IMAGEKIT_PUBLIC_KEY || !process.env.IMAGEKIT_PRIVATE_KEY || !process.env.IMAGEKIT_URL_ENDPOINT) {
+        throw new Error("Missing ImageKit environment variables");
+    }
+    const params = imagekit.getAuthenticationParameters();
+    return {
+        signature: params.signature,
+        token: params.token,
+        expire: params.expire,
+        publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+        urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT
+    };
+}
+
 module.exports = {
-    uploadFile
+    uploadFile,
+    getImagekitAuth
 }
