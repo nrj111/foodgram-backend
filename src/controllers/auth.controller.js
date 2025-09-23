@@ -166,6 +166,17 @@ async function loginFoodPartner (req, res) {
     }
 }
 
+// Add: complete Food Partner logout
+function logoutFoodPartner (req, res) {
+    try {
+        setCorsForAuth(req, res)
+        res.clearCookie("partnerToken", { ...cookieOptions })
+        return res.status(200).json({ message : "Food Partner Logged out successfully" })
+    } catch {
+        return res.status(200).json({ message : "Food Partner Logged out" })
+    }
+}
+
 // New: session endpoints for frontend redirects
 function getUserSession(req, res) {
   if (!req.user) return res.status(401).json({ authenticated: false });
