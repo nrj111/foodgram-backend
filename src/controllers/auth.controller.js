@@ -30,20 +30,33 @@ function setCorsForAuth(req, res) {
   }
 }
 
+// helpers
+const normalizeEmail = (v) => String(v || '').trim().toLowerCase()
+function getJwtSecretOrThrow() {
+  const s = process.env.JWT_SECRET
+  if (!s) throw new Error('Server misconfiguration: JWT_SECRET is missing')
+  return s
+}
+
 async function registerUser (req, res){
     try {
         if (!assertBody(req, res)) return
-        const { fullName, email, password } = req.body;
+        const fullName = String(req.body.fullName || '').trim()
+        const email = normalizeEmail(req.body.email)
+        const password = String(req.body.password || '')
+
         if (!fullName || !email || !password) {
           return res.status(400).json({ message: "fullName, email and password are required" });
         }
-        const isUserAlreadyExists = await userModel.findOne({email})
+
+        const isUserAlreadyExists = await userModel.findOne({ email })
         if (isUserAlreadyExists){
             return res.status(400).json({ message: "User Already Exists" });
         }
+
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = await userModel.create({ fullName, email, password: hashedPassword })
-        const token = jwt.sign({ id : user._id }, process.env.JWT_SECRET, { expiresIn: '7d' })
+        const token = jwt.sign({ id : user._id }, getJwtSecretOrThrow(), { expiresIn: '7d' })
         setCorsForAuth(req, res)
         res.cookie("userToken", token, cookieOptions)
         return res.status(201).json({
@@ -52,27 +65,33 @@ async function registerUser (req, res){
             user: { _id : user._id, fullName : user.fullName, email : user.email },
             redirectTo: "/"
         })
-    } catch {
-        return res.status(500).json({ message: "Server error during registration" })
+    } catch (err) {
+        console.error('registerUser error:', err?.message || err)
+        const msg = /JWT_SECRET/.test(String(err?.message)) ? err.message : "Server error during registration"
+        return res.status(500).json({ message: msg })
     }
 }
 
 async function loginUser (req, res) {
     try {
         if (!assertBody(req, res)) return
-        const {email, password} = req.body;
+        const email = normalizeEmail(req.body.email)
+        const password = String(req.body.password || '')
+
         if (!email || !password) {
           return res.status(400).json({ message: "Email and password are required" });
         }
-        const user = await userModel.findOne({email})
+
+        const user = await userModel.findOne({ email })
         if(!user || !user.password){
             return res.status(400).json({ message : "Invalid Username and Password" })
         }
-        const isPasswordValid = await bcrypt.compare(String(password), String(user.password))
+        const isPasswordValid = await bcrypt.compare(password, String(user.password))
         if(!isPasswordValid){
             return res.status(400).json({ message : "Invalid Username and Password" })
         }
-        const token = jwt.sign({ id : user._id },  process.env.JWT_SECRET, { expiresIn: '7d' })
+
+        const token = jwt.sign({ id : user._id },  getJwtSecretOrThrow(), { expiresIn: '7d' })
         setCorsForAuth(req, res)
         res.cookie("userToken", token, cookieOptions)
         return res.status(200).json({
@@ -83,8 +102,10 @@ async function loginUser (req, res) {
             fullName : user.fullName,
             redirectTo: "/"
         })
-    } catch {
-        return res.status(500).json({ message: "Server error during login" })
+    } catch (err) {
+        console.error('loginUser error:', err?.message || err)
+        const msg = /JWT_SECRET/.test(String(err?.message)) ? err.message : "Server error during login"
+        return res.status(500).json({ message: msg })
     }
 }
 
@@ -101,19 +122,28 @@ function logoutUser (req, res) {
 async function registerFoodPartner(req, res) {
   try {
     if (!assertBody(req, res)) return
-    const { name, contactName, phone, address, email, password } = req.body;
+    const name = String(req.body.name || '').trim()
+    const contactName = String(req.body.contactName || '').trim()
+    const phone = String(req.body.phone || '').trim()
+    const address = String(req.body.address || '').trim()
+    const email = normalizeEmail(req.body.email)
+    const password = String(req.body.password || '')
+
     if (!name || !contactName || !phone || !address || !email || !password) {
       return res.status(400).json({ message: "name, contactName, phone, address, email and password are required" });
     }
+
     const isAccountAlreadyExists = await foodPartnerModel.findOne({ email });
     if (isAccountAlreadyExists) {
       return res.status(400).json({ message: "Email already registered" });
     }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const foodPartner = await foodPartnerModel.create({
       name, contactName, phone, address, email, password: hashedPassword,
     });
-    const token = jwt.sign({ id: foodPartner._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+    const token = jwt.sign({ id: foodPartner._id }, getJwtSecretOrThrow(), { expiresIn: "7d" });
     setCorsForAuth(req, res)
     res.cookie("partnerToken", token, cookieOptions);
     return res.status(201).json({
@@ -129,27 +159,34 @@ async function registerFoodPartner(req, res) {
       },
       redirectTo: "/"
     });
-  } catch {
-    return res.status(500).json({ message: "Server error during partner registration" });
+  } catch (err) {
+    console.error('registerFoodPartner error:', err?.message || err)
+    const msg = /JWT_SECRET/.test(String(err?.message)) ? err.message : "Server error during partner registration"
+    return res.status(500).json({ message: msg });
   }
 }
 
 async function loginFoodPartner (req, res) {
     try {
         if (!assertBody(req, res)) return
-        const {email, password} = req.body;
+        const email = normalizeEmail(req.body.email)
+        const password = String(req.body.password || '')
+
         if (!email || !password) {
           return res.status(400).json({ message: "Email and password are required" });
         }
-        const foodPartner = await foodPartnerModel.findOne({email})
+
+        const foodPartner = await foodPartnerModel.findOne({ email })
         if (!foodPartner || !foodPartner.password){
             return res.status(400).json({ message : "Invalid Email or Password" })
         }
-        const isPasswordValid = await bcrypt.compare(String(password), String(foodPartner.password))
+
+        const isPasswordValid = await bcrypt.compare(password, String(foodPartner.password))
         if (!isPasswordValid){
             return res.status(400).json({ message : "Invalid Email or password" })
         }
-        const token = jwt.sign({ id : foodPartner._id }, process.env.JWT_SECRET, { expiresIn: '7d' })
+
+        const token = jwt.sign({ id : foodPartner._id }, getJwtSecretOrThrow(), { expiresIn: '7d' })
         setCorsForAuth(req, res)
         res.cookie("partnerToken", token, cookieOptions)
         return res.status(200).json({
@@ -162,8 +199,10 @@ async function loginFoodPartner (req, res) {
             },
             redirectTo: "/"
         })
-    } catch {
-        return res.status(500).json({ message: "Server error during partner login" })
+    } catch (err) {
+        console.error('loginFoodPartner error:', err?.message || err)
+        const msg = /JWT_SECRET/.test(String(err?.message)) ? err.message : "Server error during partner login"
+        return res.status(500).json({ message: msg })
     }
 }
 
