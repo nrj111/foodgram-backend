@@ -12,36 +12,32 @@ async function createFood(req, res) {
     }
 
     try {
-        const rawPrice = req.body.price;
+        const { name, description, videoUrl: rawUrl, price: rawPrice } = req.body;
         const price = Number.parseFloat(rawPrice);
-        if (Number.isNaN(price) || price < 0) {
-            return res.status(400).json({ message: "Valid price is required" });
+        if (!name || Number.isNaN(price) || price < 0) {
+            return res.status(400).json({ message: "Valid name and price are required" });
         }
 
-        let videoUrl = String(req.body.videoUrl || '').trim();
-
+        let videoUrl = String(rawUrl || '').trim();
         if (!videoUrl) {
             if (!req.file || !req.file.buffer) {
-                return res.status(400).json({ message: "Provide videoUrl (direct upload) or attach video file (field 'video')" });
+                return res.status(400).json({ message: "Provide videoUrl or attach video (field 'video')" });
             }
-            // Fallback: server-side upload (small files only due to Vercel limit)
+            // Fallback only for small files (serverless limit)
             videoUrl = await storageService.uploadFile(req.file.buffer, uuid(), req.file.mimetype);
         }
 
-        const foodItem = await foodModel.create({
-            name: req.body.name,
-            description: req.body.description,
+        const food = await foodModel.create({
+            name,
+            description,
             video: videoUrl,
-            foodPartner: req.foodPartner._id,
             price,
+            foodPartner: req.foodPartner._id
         });
 
-        res.status(201).json({
-            message: "food created successfully",
-            food: foodItem
-        });
+        return res.status(201).json({ message: "food created successfully", food });
     } catch (err) {
-        res.status(500).json({ message: "Failed to create food", error: err.message || err });
+        return res.status(500).json({ message: "Failed to create food", error: err?.message || err });
     }
 
 }

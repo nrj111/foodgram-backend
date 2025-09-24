@@ -102,13 +102,14 @@ Routes summary (base URL http://localhost:3000):
   - POST /api/auth/foodPartner/login
   - GET  /api/auth/foodPartner/logout
 - Food
-  - POST /api/food                      (Food Partner auth; multipart field: video; fields: name, description, price)
-  - GET  /api/food                      (Public; returns feed with foodPartner.name populated)
-  - POST /api/food/like                 (User auth; body: { foodId })
-  - POST /api/food/save                 (User auth; body: { foodId })
-  - GET  /api/food/save                 (User auth; returns saved foods with foodPartner.name)
+  - GET  /api/food/upload/auth        (Food Partner auth; returns ImageKit signature/token/expire/publicKey/urlEndpoint)
+  - POST /api/food                    (Food Partner auth; accepts videoUrl or multipart 'video'; fields: name, description, price)
+  - GET  /api/food                    (Public; returns feed with foodPartner.name populated)
+  - POST /api/food/like               (User auth; body: { foodId })
+  - POST /api/food/save               (User auth; body: { foodId })
+  - GET  /api/food/save               (User auth; returns saved foods with foodPartner.name)
 - Food Partner
-  - GET  /api/food-partner/:id          (User auth; returns partner details + uploaded reels)
+  - GET  /api/food-partner/:id        (Public; partner details + uploaded reels)
 
 Notes
 - Cookies: userToken, partnerToken

@@ -90,6 +90,7 @@ async function loginUser (req, res) {
 
 function logoutUser (req, res) {
     try {
+        setCorsForAuth(req, res)
         res.clearCookie("userToken", { ...cookieOptions })
         return res.status(200).json({ message : "User Logged out successfully" })
     } catch {
