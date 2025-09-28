@@ -12,6 +12,18 @@ const cookieOptions = {
   maxAge: 7 * 24 * 60 * 60 * 1000
 }
 
+// Helper: decide Secure based on request (HTTPS or known prod origins)
+function isHttpsRequest(req) {
+  if (req.secure) return true
+  const xfProto = req.headers['x-forwarded-proto']
+  if (typeof xfProto === 'string' && xfProto.split(',')[0].trim() === 'https') return true
+  const origin = req.headers.origin || ''
+  return origin.startsWith('https://')
+}
+function getCookieOptions(req) {
+  return { ...cookieOptions, secure: isHttpsRequest(req) }
+}
+
 // Guard: ensure body is present (helps when parsers are missing or wrong Content-Type)
 function assertBody(req, res) {
   if (!req.body || (typeof req.body === 'object' && Object.keys(req.body).length === 0)) {
@@ -58,7 +70,7 @@ async function registerUser (req, res){
         const user = await userModel.create({ fullName, email, password: hashedPassword })
         const token = jwt.sign({ id : user._id }, getJwtSecretOrThrow(), { expiresIn: '7d' })
         setCorsForAuth(req, res)
-        res.cookie("userToken", token, cookieOptions)
+        res.cookie("userToken", token, getCookieOptions(req))
         return res.status(201).json({
             message:"User Registered Successfully",
             token,
@@ -93,7 +105,7 @@ async function loginUser (req, res) {
 
         const token = jwt.sign({ id : user._id },  getJwtSecretOrThrow(), { expiresIn: '7d' })
         setCorsForAuth(req, res)
-        res.cookie("userToken", token, cookieOptions)
+        res.cookie("userToken", token, getCookieOptions(req))
         return res.status(200).json({
             message: "User logged in Successfully",
             token,
@@ -112,7 +124,10 @@ async function loginUser (req, res) {
 function logoutUser (req, res) {
     try {
         setCorsForAuth(req, res)
-        res.clearCookie("userToken", { ...cookieOptions })
+        // clear with dynamic options and a fallback (secure/non-secure)
+        res.clearCookie("userToken", getCookieOptions(req))
+        res.clearCookie("userToken", { ...cookieOptions, secure: true })
+        res.clearCookie("userToken", { ...cookieOptions, secure: false })
         return res.status(200).json({ message : "User Logged out successfully" })
     } catch {
         return res.status(200).json({ message : "User Logged out" })
@@ -145,7 +160,7 @@ async function registerFoodPartner(req, res) {
 
     const token = jwt.sign({ id: foodPartner._id }, getJwtSecretOrThrow(), { expiresIn: "7d" });
     setCorsForAuth(req, res)
-    res.cookie("partnerToken", token, cookieOptions);
+    res.cookie("partnerToken", token, getCookieOptions(req));
     return res.status(201).json({
       message: "Food Partner Registered Successfully",
       token,
@@ -188,7 +203,7 @@ async function loginFoodPartner (req, res) {
 
         const token = jwt.sign({ id : foodPartner._id }, getJwtSecretOrThrow(), { expiresIn: '7d' })
         setCorsForAuth(req, res)
-        res.cookie("partnerToken", token, cookieOptions)
+        res.cookie("partnerToken", token, getCookieOptions(req))
         return res.status(200).json({
             message : "Food Partner logged in Successfully",
             token,
@@ -210,7 +225,9 @@ async function loginFoodPartner (req, res) {
 function logoutFoodPartner (req, res) {
     try {
         setCorsForAuth(req, res)
-        res.clearCookie("partnerToken", { ...cookieOptions })
+        res.clearCookie("partnerToken", getCookieOptions(req))
+        res.clearCookie("partnerToken", { ...cookieOptions, secure: true })
+        res.clearCookie("partnerToken", { ...cookieOptions, secure: false })
         return res.status(200).json({ message : "Food Partner Logged out successfully" })
     } catch {
         return res.status(200).json({ message : "Food Partner Logged out" })

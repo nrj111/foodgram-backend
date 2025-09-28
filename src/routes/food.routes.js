@@ -28,9 +28,8 @@ router.post('/',
     upload.single("video"),
     foodController.createFood)
 
-
+// Feed: make public (remove auth middleware)
 router.get("/",
-    authMiddleware.authUserMiddleware,
     foodController.getFoodItems)
 
 
