@@ -15,9 +15,9 @@ router.get('/upload/auth',
     (req, res) => {
         try {
             const auth = storageService.getImagekitAuth();
-            res.status(200).json(auth);
-        } catch (err) {
-            res.status(500).json({ message: 'Failed to generate upload auth', error: err.message || err });
+            return res.status(200).json(auth);
+        } catch (e) {
+            return res.status(500).json({ message: 'Failed to get upload auth', error: e?.message || String(e) });
         }
     }
 )
