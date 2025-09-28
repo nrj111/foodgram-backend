@@ -50,6 +50,20 @@ function getJwtSecretOrThrow() {
   return s
 }
 
+// Helper to aggressively clear a cookie across secure variants
+function clearCookieAll(res, name) {
+  const base = { path: '/', sameSite: 'none' };
+  const expired = new Date(0);
+  const variants = [
+    { secure: true },
+    { secure: false }
+  ];
+  variants.forEach(v => {
+    res.cookie(name, '', { ...base, ...v, httpOnly: true, expires: expired, maxAge: 0 });
+    res.clearCookie(name, { ...base, ...v });
+  });
+}
+
 async function registerUser (req, res){
     try {
         if (!assertBody(req, res)) return
@@ -105,6 +119,8 @@ async function loginUser (req, res) {
 
         const token = jwt.sign({ id : user._id },  getJwtSecretOrThrow(), { expiresIn: '7d' })
         setCorsForAuth(req, res)
+        // Mutual exclusion: clear any partner token first
+        clearCookieAll(res, 'partnerToken');
         res.cookie("userToken", token, getCookieOptions(req))
         return res.status(200).json({
             message: "User logged in Successfully",
@@ -124,10 +140,7 @@ async function loginUser (req, res) {
 function logoutUser (req, res) {
     try {
         setCorsForAuth(req, res)
-        // clear with dynamic options and a fallback (secure/non-secure)
-        res.clearCookie("userToken", getCookieOptions(req))
-        res.clearCookie("userToken", { ...cookieOptions, secure: true })
-        res.clearCookie("userToken", { ...cookieOptions, secure: false })
+        clearCookieAll(res, "userToken");
         return res.status(200).json({ message : "User Logged out successfully" })
     } catch {
         return res.status(200).json({ message : "User Logged out" })
@@ -203,6 +216,8 @@ async function loginFoodPartner (req, res) {
 
         const token = jwt.sign({ id : foodPartner._id }, getJwtSecretOrThrow(), { expiresIn: '7d' })
         setCorsForAuth(req, res)
+        // Mutual exclusion: clear any user token first
+        clearCookieAll(res, 'userToken');
         res.cookie("partnerToken", token, getCookieOptions(req))
         return res.status(200).json({
             message : "Food Partner logged in Successfully",
@@ -225,9 +240,7 @@ async function loginFoodPartner (req, res) {
 function logoutFoodPartner (req, res) {
     try {
         setCorsForAuth(req, res)
-        res.clearCookie("partnerToken", getCookieOptions(req))
-        res.clearCookie("partnerToken", { ...cookieOptions, secure: true })
-        res.clearCookie("partnerToken", { ...cookieOptions, secure: false })
+        clearCookieAll(res, "partnerToken");
         return res.status(200).json({ message : "Food Partner Logged out successfully" })
     } catch {
         return res.status(200).json({ message : "Food Partner Logged out" })
