@@ -4,6 +4,7 @@ const authMiddleware = require("../middlewares/auth.middlware");
 const router = express.Router();
 const multer = require('multer');
 const storageService = require('../services/storage.service');
+const commentController = require("../controllers/comment.controller");
 
 const upload = multer({
     storage: multer.memoryStorage(),
@@ -49,5 +50,18 @@ router.get('/save',
     authMiddleware.authUserMiddleware,
     foodController.getSaveFood
 )
+
+// Comments
+router.post('/comment',
+    authMiddleware.authUserMiddleware,
+    commentController.addComment)
+
+router.get('/comments/:foodId',
+    authMiddleware.optionalUserMiddleware ? authMiddleware.optionalUserMiddleware : (req,res,next)=>next(),
+    commentController.getComments)
+
+router.post('/comment/like',
+    authMiddleware.authUserMiddleware,
+    commentController.toggleCommentLike)
 
 module.exports = router
