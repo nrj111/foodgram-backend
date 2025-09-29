@@ -32,6 +32,9 @@ router.post('/',
 router.get("/",
     foodController.getFoodItems)
 
+// Single item (public)
+router.get("/item/:id",
+    foodController.getFoodItem)
 
 router.post('/like',
     authMiddleware.authUserMiddleware,
