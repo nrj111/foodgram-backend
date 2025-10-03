@@ -32,7 +32,9 @@ async function createFood(req, res) {
             description,
             video: videoUrl,
             price,
-            foodPartner: req.foodPartner._id
+            foodPartner: req.foodPartner._id,
+            likeCount: 0,
+            savesCount: 0
         });
         // ensure counters present
         food.likeCount = 0;
