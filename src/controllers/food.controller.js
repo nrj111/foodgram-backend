@@ -198,12 +198,38 @@ async function getSaveFood(req, res) {
 
 }
 
+async function deleteFood(req, res) {
+    try {
+        if (!req.foodPartner || !req.foodPartner._id) {
+            return res.status(401).json({ message: "Partner authentication required" });
+        }
+        const { id } = req.params;
+        if (!id) return res.status(400).json({ message: "Food id required" });
+
+        const food = await foodModel.findOne({ _id: id, foodPartner: req.foodPartner._id });
+        if (!food) {
+            return res.status(404).json({ message: "Food not found or not owned by partner" });
+        }
+
+        // Clean related documents (likes / saves) – fire & forget
+        Promise.allSettled([
+            likeModel.deleteMany({ food: id }),
+            saveModel.deleteMany({ food: id })
+        ]).catch(()=>{});
+
+        await food.deleteOne();
+        return res.status(200).json({ message: "Food deleted successfully", deleted: true, id });
+    } catch (err) {
+        return res.status(500).json({ message: "Failed to delete food", error: err?.message || String(err) });
+    }
+}
 
 module.exports = {
     createFood,
-    getFoodItem,        // added
+    getFoodItem,
     getFoodItems,
     likeFood,
     saveFood,
-    getSaveFood
+    getSaveFood,
+    deleteFood
 }
