@@ -75,9 +75,25 @@ async function getFoodItems(req, res) {
                 [foodItems[i], foodItems[j]] = [foodItems[j], foodItems[i]];
             }
         }
+        let likedIds = new Set()
+        let savedIds = new Set()
+        try {
+            if (req.user) {
+                const userId = req.user._id
+                const likes = await likeModel.find({ user: userId, food: { $in: foodItems.map(f => f._id) } }).select('food')
+                const saves = await saveModel.find({ user: userId, food: { $in: foodItems.map(f => f._id) } }).select('food')
+                likedIds = new Set(likes.map(l => String(l.food)))
+                savedIds = new Set(saves.map(s => String(s.food)))
+            }
+        } catch {}
+        const withFlags = foodItems.map(f => ({
+            ...f.toObject(),
+            liked: likedIds.has(String(f._id)),
+            saved: savedIds.has(String(f._id))
+        }))
         return res.status(200).json({
             message: "Food items fetched successfully",
-            foodItems
+            foodItems: withFlags
         });
     } catch (err) {
         return res.status(500).json({ message: "Failed to fetch food items", error: err?.message || String(err) });
