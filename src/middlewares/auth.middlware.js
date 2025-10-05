@@ -44,7 +44,38 @@ async function authUserMiddleware(req, res, next) {
     }
 }
 
+async function attachOptionalAuth(req, res, next) {
+    // tries user first then partner; silent on failure
+    const header = req.headers.authorization || '';
+    try {
+        let token = req.cookies?.userToken;
+        if (!token && header.startsWith('Bearer ')) token = header.split(' ')[1];
+        if (token) {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const user = await userModel.findById(decoded.id);
+            if (user) req.user = user;
+        }
+    } catch {}
+    try {
+        let token = req.cookies?.partnerToken;
+        if (!token && header.startsWith('Bearer ')) token = header.split(' ')[1];
+        if (token) {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const fp = await foodPartnerModel.findById(decoded.id);
+            if (fp) req.foodPartner = fp;
+        }
+    } catch {}
+    return next();
+}
+
+function requireAnyAuth(req, res, next) {
+    if (req.user || req.foodPartner) return next();
+    return res.status(401).json({ message: "Sign in to interact" });
+}
+
 module.exports = { 
     authFoodPartnerMiddleware,
-    authUserMiddleware
+    authUserMiddleware,
+    attachOptionalAuth,
+    requireAnyAuth
 }

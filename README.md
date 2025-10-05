@@ -110,6 +110,10 @@ Routes summary (base URL http://localhost:3000):
   - GET  /api/food/save               (User auth; returns saved foods with foodPartner.name)
 - Food Partner
   - GET  /api/food-partner/:id        (Public; partner details + uploaded reels)
+- Comments
+  - GET /api/food/comments/:foodId  (optional auth)
+  - POST /api/food/comment          (user or partner auth)
+  - POST /api/food/comment/like     (user or partner auth)
 
 Notes
 - Cookies: userToken, partnerToken

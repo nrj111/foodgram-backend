@@ -2,6 +2,8 @@ const foodModel = require('../models/food.model');
 const storageService = require('../services/storage.service');
 const likeModel = require("../models/likes.model")
 const saveModel = require("../models/save.model")
+const commentModel = require('../models/comment.model');
+const commentLikeModel = require('../models/commentLike.model');
 const { v4: uuid } = require("uuid")
 
 
@@ -234,6 +236,102 @@ async function deleteFood(req, res) {
     }
 }
 
+async function getComments(req, res) {
+    try {
+        const { foodId } = req.params;
+        if (!foodId) return res.status(400).json({ message: "foodId required", comments: [] });
+        const comments = await commentModel.find({ food: foodId })
+            .sort({ createdAt: -1 })
+            .limit(120)
+            .lean();
+        let likedSet = new Set();
+        if (comments.length && (req.user || req.foodPartner)) {
+            const actorFilter = req.user ? { user: req.user._id } : { foodPartner: req.foodPartner._id };
+            const likes = await commentLikeModel.find({ comment: { $in: comments.map(c => c._id) }, ...actorFilter }).select('comment');
+            likedSet = new Set(likes.map(l => String(l.comment)));
+        }
+        const shaped = comments.map(c => ({
+            _id: c._id,
+            text: c.text,
+            likeCount: c.likeCount || 0,
+            liked: likedSet.has(String(c._id)),
+            user: {
+                name: c.user
+                    ? 'User'
+                    : (c.foodPartner ? 'Partner' : 'User')
+            },
+            relTime: relativeTime(c.createdAt)
+        }));
+        return res.status(200).json({ comments: shaped });
+    } catch (err) {
+        return res.status(500).json({ message: "Failed to fetch comments", error: err?.message || String(err), comments: [] });
+    }
+}
+
+async function addComment(req, res) {
+    try {
+        const { foodId, text } = req.body || {};
+        if (!foodId || !text || !text.trim()) return res.status(400).json({ message: "foodId and text required" });
+        const food = await foodModel.findById(foodId).select('_id');
+        if (!food) return res.status(404).json({ message: "Food not found" });
+        const doc = await commentModel.create({
+            food: foodId,
+            user: req.user ? req.user._id : undefined,
+            foodPartner: req.foodPartner ? req.foodPartner._id : undefined,
+            text: text.trim()
+        });
+        return res.status(201).json({
+            message: "Comment added",
+            comment: {
+                _id: doc._id,
+                text: doc.text,
+                likeCount: 0,
+                liked: false,
+                user: { name: req.user ? (req.user.fullName || 'You') : (req.foodPartner?.name || 'You') },
+                relTime: 'now'
+            }
+        });
+    } catch (err) {
+        return res.status(500).json({ message: "Failed to add comment", error: err?.message || String(err) });
+    }
+}
+
+async function likeComment(req, res) {
+    try {
+        const { commentId } = req.body || {};
+        if (!commentId) return res.status(400).json({ message: "commentId required" });
+        const comment = await commentModel.findById(commentId);
+        if (!comment) return res.status(404).json({ message: "Comment not found" });
+        const filter = { comment: commentId };
+        if (req.user) filter.user = req.user._id; else filter.foodPartner = req.foodPartner._id;
+        const existing = await commentLikeModel.findOne(filter);
+        if (existing) {
+            await commentLikeModel.deleteOne({ _id: existing._id });
+            await commentModel.findByIdAndUpdate(commentId, { $inc: { likeCount: -1 } });
+            const updated = await commentModel.findById(commentId).select('likeCount');
+            return res.status(200).json({ liked: false, likeCount: Math.max(0, updated.likeCount) });
+        } else {
+            await commentLikeModel.create(filter);
+            await commentModel.findByIdAndUpdate(commentId, { $inc: { likeCount: 1 } });
+            const updated = await commentModel.findById(commentId).select('likeCount');
+            return res.status(201).json({ liked: true, likeCount: updated.likeCount });
+        }
+    } catch (err) {
+        return res.status(500).json({ message: "Failed to like comment", error: err?.message || String(err) });
+    }
+}
+
+function relativeTime(date) {
+    try {
+        const d = new Date(date);
+        const diff = (Date.now() - d.getTime()) / 1000;
+        if (diff < 60) return 'now';
+        if (diff < 3600) return Math.floor(diff / 60) + 'm';
+        if (diff < 86400) return Math.floor(diff / 3600) + 'h';
+        return Math.floor(diff / 86400) + 'd';
+    } catch { return '' }
+}
+
 module.exports = {
     createFood,
     getFoodItem,
@@ -241,5 +339,8 @@ module.exports = {
     likeFood,
     saveFood,
     getSaveFood,
-    deleteFood
+    deleteFood,
+    getComments,
+    addComment,
+    likeComment
 }
