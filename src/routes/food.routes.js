@@ -37,6 +37,15 @@ router.get("/",
 router.get("/item/:id",
     foodController.getFoodItem)
 
+// NEW: direct single item path to match frontend fetchSingle(`/api/food/${id}`)
+router.get("/:id",
+    foodController.getFoodItem)
+
+// NEW: delete (frontend already calls DELETE /api/food/:id)
+router.delete("/:id",
+    authMiddleware.authFoodPartnerMiddleware,
+    foodController.deleteFood)
+
 router.post('/like',
     authMiddleware.authUserMiddleware,
     foodController.likeFood)
@@ -56,8 +65,9 @@ router.post('/comment',
     authMiddleware.authUserMiddleware,
     commentController.addComment)
 
+// FIX: use attachOptionalAuth instead of non-existent optionalUserMiddleware
 router.get('/comments/:foodId',
-    authMiddleware.optionalUserMiddleware ? authMiddleware.optionalUserMiddleware : (req,res,next)=>next(),
+    authMiddleware.attachOptionalAuth,
     commentController.getComments)
 
 router.post('/comment/like',
