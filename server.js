@@ -1,9 +1,11 @@
 require('dotenv').config();
-const app = require("./src/app")
-const connectDB = require('./src/db/db')
+const app = require("./src/app");
+const connectDB = require('./src/db/db');
 
-// Removed: duplicated CORS/body/cookie middlewares (now in src/app.js)
+// START DB once
+connectDB();
 
+// Local development only (Vercel provides serverless entry)
 if (!process.env.VERCEL) {
   const port = process.env.PORT || 3000;
   app.listen(port, () => {
@@ -11,10 +13,8 @@ if (!process.env.VERCEL) {
   });
 }
 
-connectDB();
-
+// Single export (removed duplicate second block)
 module.exports = app;
-// Start HTTP server only when not running on Vercel
 if (!process.env.VERCEL) {
   const port = process.env.PORT || 3000;
   app.listen(port, () => {

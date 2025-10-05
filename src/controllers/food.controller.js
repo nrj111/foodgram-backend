@@ -8,7 +8,7 @@ const { v4: uuid } = require("uuid")
 async function createFood(req, res) {
 
     if (!req.foodPartner || !req.foodPartner._id) {
-        return res.status(400).json({ message: "Food partner missing" });
+        return res.status(401).json({ message: "Partner authentication required" }); // changed status
     }
 
     try {
@@ -102,6 +102,9 @@ async function getFoodItems(req, res) {
 
 async function likeFood(req, res) {
     try {
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({ message: "User authentication required" }); // NEW guard
+        }
         const { foodId } = req.body;
         const user = req.user;
         if (!foodId) return res.status(400).json({ message: "foodId is required" });
@@ -140,6 +143,9 @@ async function likeFood(req, res) {
 
 async function saveFood(req, res) {
     try {
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({ message: "User authentication required" }); // NEW guard
+        }
         const { foodId } = req.body;
         const user = req.user;
         if (!foodId) return res.status(400).json({ message: "foodId is required" });
@@ -176,6 +182,10 @@ async function saveFood(req, res) {
 }
 
 async function getSaveFood(req, res) {
+    // NEW guard
+    if (!req.user || !req.user._id) {
+        return res.status(401).json({ message: "User authentication required", savedFoods: [] });
+    }
 
     const user = req.user;
 
