@@ -10,6 +10,9 @@
     { "src": "/api", "dest": "server.js" },
     { "src": "/api/(.*)", "dest": "server.js" },
     { "src": "/", "dest": "server.js" }
-  ]
+  ],
+  "comments": {
+    "tailwind": "Frontend Tailwind compilation happens in frontend build; backend routing unchanged."
+  }
 }
 
