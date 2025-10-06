@@ -62,16 +62,15 @@ router.get('/save',
 
 // Comments
 router.post('/comment',
-    authMiddleware.authUserMiddleware,
+    authMiddleware.requireAnyAuth,          // changed from authUserMiddleware
     commentController.addComment)
 
-// FIX: use attachOptionalAuth instead of non-existent optionalUserMiddleware
 router.get('/comments/:foodId',
-    authMiddleware.attachOptionalAuth,
+    authMiddleware.attachOptionalAuth,      // unchanged
     commentController.getComments)
 
 router.post('/comment/like',
-    authMiddleware.authUserMiddleware,
+    authMiddleware.requireAnyAuth,          // changed from authUserMiddleware
     commentController.toggleCommentLike)
 
 module.exports = router
