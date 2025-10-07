@@ -24,9 +24,27 @@ exports.addComment = async (req, res) => {
   try {
     const actorUser = req.user
     const actorPartner = req.foodPartner
-    if (!actorUser && !actorPartner) {
-      return res.status(401).json({ message: 'Authentication required to comment', code: 'NO_AUTH' })
+    
+    // Add enhanced debug info to help diagnose auth issues
+    const authInfo = {
+      hasUser: !!actorUser,
+      hasPartner: !!actorPartner,
+      userID: actorUser?._id?.toString()?.substring(0, 6) || null,
+      partnerID: actorPartner?._id?.toString()?.substring(0, 6) || null,
+      cookies: {
+        userToken: !!req.cookies?.userToken,
+        partnerToken: !!req.cookies?.partnerToken
+      }
     }
+    
+    if (!actorUser && !actorPartner) {
+      return res.status(401).json({
+        message: 'Authentication required to comment',
+        code: 'NO_AUTH',
+        authInfo
+      })
+    }
+    
     const { foodId, text } = req.body
     if (!foodId || !text?.trim()) {
       return res.status(400).json({ message: 'foodId and text required', code: 'VALIDATION' })
@@ -79,6 +97,19 @@ exports.getComments = async (req, res) => {
     const uid = req.user?._id?.toString()
     const pid = req.foodPartner?._id?.toString()
 
+    // Enhanced debugging info
+    const authDebug = {
+      isUser: !!uid,
+      isPartner: !!pid,
+      userId: uid ? uid.substring(0, 6) + '...' : null,
+      partnerId: pid ? pid.substring(0, 6) + '...' : null,
+      cookies: {
+        hasUserToken: !!req.cookies?.userToken,
+        hasPartnerToken: !!req.cookies?.partnerToken,
+      }
+    }
+
+    // Rest of the function remains the same
     const shaped = comments.map(c => {
       const liked =
         (uid && c.likedBy?.some(id => id.toString() === uid)) ||
@@ -97,14 +128,11 @@ exports.getComments = async (req, res) => {
       }
     })
 
-    const resp = {
+    return res.status(200).json({
       message: 'Comments fetched',
-      comments: shaped
-    }
-    if (req.query.debug === '1') {
-      resp.authDebug = { isUser: !!uid, isPartner: !!pid }
-    }
-    return res.status(200).json(resp)
+      comments: shaped,
+      authDebug // Always include debug info to help troubleshoot
+    })
   } catch (e) {
     return res.status(500).json({
       message: 'Failed to fetch comments',
