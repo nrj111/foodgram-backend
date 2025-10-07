@@ -20,6 +20,81 @@ function safeRelTime(date) {
   return `${yr}y`
 }
 
+exports.getComments = async (req, res) => {
+  try {
+    const { foodId } = req.params
+    if (!foodId) return res.status(400).json({ message: 'foodId required', comments: [], code: 'VALIDATION' })
+    
+    // Populate user and foodPartner references to get actual names
+    const comments = await commentModel.find({ food: foodId })
+      .populate('user', 'fullName email')
+      .populate('foodPartner', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .lean()
+
+    const uid = req.user?._id?.toString()
+    const pid = req.foodPartner?._id?.toString()
+
+    // Enhanced debugging info
+    const authDebug = {
+      isUser: !!uid,
+      isPartner: !!pid,
+      userId: uid ? uid.substring(0, 6) + '...' : null,
+      partnerId: pid ? pid.substring(0, 6) + '...' : null,
+      cookies: {
+        hasUserToken: !!req.cookies?.userToken,
+        hasPartnerToken: !!req.cookies?.partnerToken,
+      }
+    }
+
+    const shaped = comments.map(c => {
+      const liked =
+        (uid && c.likedBy?.some(id => id.toString() === uid)) ||
+        (pid && c.likedByPartners?.some(id => id.toString() === pid)) || false
+      
+      // Get the actual name from populated fields
+      let name = 'Anonymous';
+      let authorType = 'unknown';
+      
+      if (c.user) {
+        name = c.user.fullName || 'User';
+        authorType = 'user';
+      } else if (c.foodPartner) {
+        name = c.foodPartner.name || 'Partner';
+        authorType = 'partner';
+      }
+      
+      return {
+        _id: c._id,
+        text: c.text,
+        likeCount: c.likeCount || 0,
+        liked,
+        user: {
+          _id: c.user?._id || c.foodPartner?._id || null,
+          name: name,
+          type: authorType
+        },
+        createdAt: c.createdAt,
+        relTime: safeRelTime(new Date(c.createdAt))
+      }
+    })
+
+    return res.status(200).json({
+      message: 'Comments fetched',
+      comments: shaped,
+      authDebug
+    })
+  } catch (e) {
+    return res.status(500).json({
+      message: 'Failed to fetch comments',
+      error: e?.message || String(e),
+      comments: [],
+      code: 'SERVER_ERROR'
+    })
+  }
+}
+
 exports.addComment = async (req, res) => {
   try {
     const actorUser = req.user
@@ -49,6 +124,7 @@ exports.addComment = async (req, res) => {
     if (!foodId || !text?.trim()) {
       return res.status(400).json({ message: 'foodId and text required', code: 'VALIDATION' })
     }
+    
     const food = await foodModel.findById(foodId).select('_id')
     if (!food) return res.status(404).json({ message: 'Food not found', code: 'NOT_FOUND' })
 
@@ -58,8 +134,13 @@ exports.addComment = async (req, res) => {
       foodPartner: actorPartner ? actorPartner._id : undefined,
       text: text.trim()
     })
-    // (optional) increment counter if you later add commentsCount on food
+    
+    // Update food comments count
     foodModel.findByIdAndUpdate(foodId, { $inc: { commentsCount: 1 } }).catch(()=>{})
+    
+    // More accurate user info in response
+    const userName = actorUser ? actorUser.fullName : (actorPartner ? actorPartner.name : 'Anonymous');
+    const authorType = actorUser ? 'user' : 'partner';
 
     return res.status(201).json({
       message: 'Comment added',
@@ -69,75 +150,19 @@ exports.addComment = async (req, res) => {
         likeCount: 0,
         liked: false,
         user: {
-          _id: actorUser?.id || actorPartner?.id,
-            name: actorUser?.fullName || actorPartner?.name || 'You'
+          _id: actorUser?._id || actorPartner?._id,
+          name: userName,
+          type: authorType
         },
         createdAt: commentDoc.createdAt,
         relTime: '0s'
       }
     })
   } catch (e) {
+    console.error("Comment error:", e);
     return res.status(500).json({
       message: 'Failed to add comment',
       error: e?.message || String(e),
-      code: 'SERVER_ERROR'
-    })
-  }
-}
-
-exports.getComments = async (req, res) => {
-  try {
-    const { foodId } = req.params
-    if (!foodId) return res.status(400).json({ message: 'foodId required', comments: [], code: 'VALIDATION' })
-    const comments = await commentModel.find({ food: foodId })
-      .sort({ createdAt: -1 })
-      .limit(200)
-      .lean()
-
-    const uid = req.user?._id?.toString()
-    const pid = req.foodPartner?._id?.toString()
-
-    // Enhanced debugging info
-    const authDebug = {
-      isUser: !!uid,
-      isPartner: !!pid,
-      userId: uid ? uid.substring(0, 6) + '...' : null,
-      partnerId: pid ? pid.substring(0, 6) + '...' : null,
-      cookies: {
-        hasUserToken: !!req.cookies?.userToken,
-        hasPartnerToken: !!req.cookies?.partnerToken,
-      }
-    }
-
-    // Rest of the function remains the same
-    const shaped = comments.map(c => {
-      const liked =
-        (uid && c.likedBy?.some(id => id.toString() === uid)) ||
-        (pid && c.likedByPartners?.some(id => id.toString() === pid)) || false
-      return {
-        _id: c._id,
-        text: c.text,
-        likeCount: c.likeCount || 0,
-        liked,
-        user: {
-          _id: c.user || c.foodPartner || null,
-          name: c.user ? 'User' : (c.foodPartner ? 'Partner' : 'User')
-        },
-        createdAt: c.createdAt,
-        relTime: safeRelTime(new Date(c.createdAt))
-      }
-    })
-
-    return res.status(200).json({
-      message: 'Comments fetched',
-      comments: shaped,
-      authDebug // Always include debug info to help troubleshoot
-    })
-  } catch (e) {
-    return res.status(500).json({
-      message: 'Failed to fetch comments',
-      error: e?.message || String(e),
-      comments: [],
       code: 'SERVER_ERROR'
     })
   }
