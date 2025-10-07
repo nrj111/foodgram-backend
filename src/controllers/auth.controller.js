@@ -44,9 +44,13 @@ function setCorsForAuth(req, res) {
 
 // helpers
 const normalizeEmail = (v) => String(v || '').trim().toLowerCase()
+// Improved JWT secret handling with better error messages
 function getJwtSecretOrThrow() {
   const s = process.env.JWT_SECRET
-  if (!s) throw new Error('Server misconfiguration: JWT_SECRET is missing')
+  if (!s) {
+    console.error('[CRITICAL] JWT_SECRET environment variable is not set!');
+    throw new Error('Server configuration error: JWT_SECRET is missing')
+  }
   return s
 }
 
@@ -110,14 +114,22 @@ async function loginUser (req, res) {
 
         const user = await userModel.findOne({ email })
         if(!user || !user.password){
-            return res.status(400).json({ message : "Invalid Username and Password" })
+            return res.status(400).json({ message : "Invalid username or password" })
         }
         const isPasswordValid = await bcrypt.compare(password, String(user.password))
         if(!isPasswordValid){
-            return res.status(400).json({ message : "Invalid Username and Password" })
+            return res.status(400).json({ message : "Invalid username or password" })
         }
 
-        const token = jwt.sign({ id : user._id },  getJwtSecretOrThrow(), { expiresIn: '7d' })
+        // Get JWT secret with proper error handling
+        let token;
+        try {
+            token = jwt.sign({ id : user._id }, getJwtSecretOrThrow(), { expiresIn: '7d' })
+        } catch (err) {
+            console.error('JWT signing error:', err);
+            return res.status(500).json({ message: "Authentication service error" });
+        }
+        
         setCorsForAuth(req, res)
         // Mutual exclusion: clear any partner token first
         clearCookieAll(res, 'partnerToken');
@@ -131,9 +143,12 @@ async function loginUser (req, res) {
             redirectTo: "/"
         })
     } catch (err) {
-        console.error('loginUser error:', err?.message || err)
-        const msg = /JWT_SECRET/.test(String(err?.message)) ? err.message : "Server error during login"
-        return res.status(500).json({ message: msg })
+        console.error('loginUser error:', err);
+        const isMongo = err.name === 'MongoServerError' || err.name === 'MongoError';
+        if (isMongo) {
+            return res.status(500).json({ message: "Database connection error" });
+        }
+        return res.status(500).json({ message: "Server error during login" })
     }
 }
 
@@ -206,15 +221,23 @@ async function loginFoodPartner (req, res) {
 
         const foodPartner = await foodPartnerModel.findOne({ email })
         if (!foodPartner || !foodPartner.password){
-            return res.status(400).json({ message : "Invalid Email or Password" })
+            return res.status(400).json({ message : "Invalid email or password" })
         }
 
         const isPasswordValid = await bcrypt.compare(password, String(foodPartner.password))
         if (!isPasswordValid){
-            return res.status(400).json({ message : "Invalid Email or password" })
+            return res.status(400).json({ message : "Invalid email or password" })
         }
 
-        const token = jwt.sign({ id : foodPartner._id }, getJwtSecretOrThrow(), { expiresIn: '7d' })
+        // Get JWT secret with proper error handling
+        let token;
+        try {
+            token = jwt.sign({ id : foodPartner._id }, getJwtSecretOrThrow(), { expiresIn: '7d' })
+        } catch (err) {
+            console.error('JWT signing error:', err);
+            return res.status(500).json({ message: "Authentication service error" });
+        }
+        
         setCorsForAuth(req, res)
         // Mutual exclusion: clear any user token first
         clearCookieAll(res, 'userToken');
@@ -230,9 +253,12 @@ async function loginFoodPartner (req, res) {
             redirectTo: "/"
         })
     } catch (err) {
-        console.error('loginFoodPartner error:', err?.message || err)
-        const msg = /JWT_SECRET/.test(String(err?.message)) ? err.message : "Server error during partner login"
-        return res.status(500).json({ message: msg })
+        console.error('loginFoodPartner error:', err);
+        const isMongo = err.name === 'MongoServerError' || err.name === 'MongoError';
+        if (isMongo) {
+            return res.status(500).json({ message: "Database connection error" });
+        }
+        return res.status(500).json({ message: "Server error during login" })
     }
 }
 
